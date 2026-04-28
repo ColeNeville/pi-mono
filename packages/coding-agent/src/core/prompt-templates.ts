@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, dirname, isAbsolute, join, resolve, sep } from "path";
-import { CONFIG_DIR_NAME } from "../config.js";
+import { CONFIG_DIR_NAME, getConfigDir } from "../config.js";
 import { parseFrontmatter } from "../utils/frontmatter.js";
 import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.js";
 
@@ -200,19 +200,19 @@ function resolvePromptPath(p: string, cwd: string): string {
 
 /**
  * Load all prompt templates from:
- * 1. Global: agentDir/prompts/
+ * 1. Global: getConfigDir()/prompts/
  * 2. Project: cwd/{CONFIG_DIR_NAME}/prompts/
  * 3. Explicit prompt paths
  */
 export function loadPromptTemplates(options: LoadPromptTemplatesOptions): PromptTemplate[] {
 	const resolvedCwd = options.cwd;
-	const resolvedAgentDir = options.agentDir;
 	const promptPaths = options.promptPaths;
 	const includeDefaults = options.includeDefaults;
 
 	const templates: PromptTemplate[] = [];
 
-	const globalPromptsDir = options.agentDir ? join(options.agentDir, "prompts") : resolvedAgentDir;
+	const configDir = getConfigDir();
+	const globalPromptsDir = options.agentDir ? join(options.agentDir, "prompts") : configDir;
 	const projectPromptsDir = resolve(resolvedCwd, CONFIG_DIR_NAME, "prompts");
 
 	const isUnderPath = (target: string, root: string): boolean => {

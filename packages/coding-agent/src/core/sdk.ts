@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { Agent, type AgentMessage, type ThinkingLevel } from "@mariozechner/pi-agent-core";
 import { type Message, type Model, streamSimple } from "@mariozechner/pi-ai";
-import { getAgentDir } from "../config.js";
+import { getAgentDir, getAuthPath, getDataDir, getModelRegistryPath } from "../config.js";
 import { AgentSession } from "./agent-session.js";
 import { formatNoModelsAvailableMessage } from "./auth-guidance.js";
 import { AuthStorage } from "./auth-storage.js";
@@ -12,10 +12,9 @@ import { ModelRegistry } from "./model-registry.js";
 import { findInitialModel } from "./model-resolver.js";
 import type { ResourceLoader } from "./resource-loader.js";
 import { DefaultResourceLoader } from "./resource-loader.js";
-import { getDefaultSessionDir, SessionManager } from "./session-manager.js";
+import { SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";
 import { isInstallTelemetryEnabled } from "./telemetry.js";
-import { time } from "./timings.js";
 import {
 	createBashTool,
 	createCodingTools,
@@ -119,12 +118,6 @@ export {
 	createLsTool,
 };
 
-// Helper Functions
-
-function getDefaultAgentDir(): string {
-	return getAgentDir();
-}
-
 function getAttributionHeaders(
 	model: Model<any>,
 	settingsManager: SettingsManager,
@@ -187,22 +180,25 @@ function getAttributionHeaders(
  */
 export async function createAgentSession(options: CreateAgentSessionOptions = {}): Promise<CreateAgentSessionResult> {
 	const cwd = options.cwd ?? options.sessionManager?.getCwd() ?? process.cwd();
-	const agentDir = options.agentDir ?? getDefaultAgentDir();
+	const agentDir = options.agentDir ?? getAgentDir();
 	let resourceLoader = options.resourceLoader;
 
 	// Use provided or create AuthStorage and ModelRegistry
-	const authPath = options.agentDir ? join(agentDir, "auth.json") : undefined;
-	const modelsPath = options.agentDir ? join(agentDir, "models.json") : undefined;
+	// When agentDir is explicitly provided, use it for backward compatibility
+	// Otherwise use the XDG-based getters
+	const authPath = options.agentDir ? join(agentDir, "auth.json") : getAuthPath();
+	const modelsPath = options.agentDir ? join(agentDir, "models.json") : getModelRegistryPath();
 	const authStorage = options.authStorage ?? AuthStorage.create(authPath);
 	const modelRegistry = options.modelRegistry ?? ModelRegistry.create(authStorage, modelsPath);
 
 	const settingsManager = options.settingsManager ?? SettingsManager.create(cwd, agentDir);
-	const sessionManager = options.sessionManager ?? SessionManager.create(cwd, getDefaultSessionDir(cwd, agentDir));
+	// When agentDir is provided, use it for session dir; otherwise use data dir
+	const sessionDir = options.agentDir ? join(agentDir, "sessions") : getDataDir();
+	const sessionManager = options.sessionManager ?? SessionManager.create(cwd, sessionDir);
 
 	if (!resourceLoader) {
 		resourceLoader = new DefaultResourceLoader({ cwd, agentDir, settingsManager });
 		await resourceLoader.reload();
-		time("resourceLoader.reload");
 	}
 
 	// Check if session has existing data to restore

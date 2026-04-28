@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import ignore from "ignore";
 import { homedir } from "os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "path";
-import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
+import { CONFIG_DIR_NAME, getAgentDir, getConfigDir, getSkillsDir } from "../config.js";
 import { parseFrontmatter } from "../utils/frontmatter.js";
 import { canonicalizePath } from "../utils/paths.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
@@ -406,7 +406,7 @@ export function loadSkills(options: LoadSkillsOptions): LoadSkillsResult {
 	const { cwd, agentDir, skillPaths, includeDefaults } = options;
 
 	// Resolve agentDir - if not provided, use default from config
-	const resolvedAgentDir = agentDir ?? getAgentDir();
+	const _resolvedAgentDir = agentDir ?? getAgentDir();
 
 	const skillMap = new Map<string, Skill>();
 	const realPathSet = new Set<string>();
@@ -445,11 +445,12 @@ export function loadSkills(options: LoadSkillsOptions): LoadSkillsResult {
 	}
 
 	if (includeDefaults) {
-		addSkills(loadSkillsFromDirInternal(join(resolvedAgentDir, "skills"), "user", true));
+		const configDir = getConfigDir();
+		addSkills(loadSkillsFromDirInternal(join(configDir, "skills"), "user", true));
 		addSkills(loadSkillsFromDirInternal(resolve(cwd, CONFIG_DIR_NAME, "skills"), "project", true));
 	}
 
-	const userSkillsDir = join(resolvedAgentDir, "skills");
+	const userSkillsDir = getSkillsDir();
 	const projectSkillsDir = resolve(cwd, CONFIG_DIR_NAME, "skills");
 
 	const isUnderPath = (target: string, root: string): boolean => {

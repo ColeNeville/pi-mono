@@ -27,7 +27,7 @@ import type { Readable } from "node:stream";
 import { globSync } from "glob";
 import ignore from "ignore";
 import { minimatch } from "minimatch";
-import { CONFIG_DIR_NAME, isBunRuntime } from "../config.js";
+import { CONFIG_DIR_NAME, getDataDir, isBunRuntime } from "../config.js";
 import { type GitSource, parseGitUrl } from "../utils/git.js";
 import { canonicalizePath, isLocalPath } from "../utils/paths.js";
 import { isStdoutTakenOver } from "./output-guard.js";
@@ -865,7 +865,8 @@ export class DefaultPackageManager implements PackageManager {
 		const packageSources = this.dedupePackages(allPackages);
 		await this.resolvePackageSources(packageSources, accumulator, onMissing);
 
-		const globalBaseDir = this.agentDir;
+		const dataDir = getDataDir();
+		const globalBaseDir = dataDir;
 		const projectBaseDir = join(this.cwd, CONFIG_DIR_NAME);
 
 		for (const resourceType of RESOURCE_TYPES) {
@@ -1870,7 +1871,8 @@ export class DefaultPackageManager implements PackageManager {
 		if (scope === "project") {
 			return join(this.cwd, CONFIG_DIR_NAME, "git", source.host, source.path);
 		}
-		return join(this.agentDir, "git", source.host, source.path);
+		const dataDir = getDataDir();
+		return join(dataDir, "git", source.host, source.path);
 	}
 
 	private getGitInstallRoot(scope: SourceScope): string | undefined {
@@ -1880,7 +1882,8 @@ export class DefaultPackageManager implements PackageManager {
 		if (scope === "project") {
 			return join(this.cwd, CONFIG_DIR_NAME, "git");
 		}
-		return join(this.agentDir, "git");
+		const dataDir = getDataDir();
+		return join(dataDir, "git");
 	}
 
 	private getTemporaryDir(prefix: string, suffix?: string): string {

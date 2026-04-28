@@ -1,5 +1,5 @@
 import { spawnSync } from "child_process";
-import { existsSync, readFileSync, realpathSync } from "fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "fs";
 import { homedir } from "os";
 import { dirname, join, resolve, sep } from "path";
 import { fileURLToPath } from "url";
@@ -340,8 +340,62 @@ export function getShareViewerUrl(gistId: string): string {
 // User Config Paths (~/.pi/agent/*)
 // =============================================================================
 
-/** Get the agent config directory (e.g., ~/.pi/agent/) */
-export function getAgentDir(): string {
+/**
+ * Get XDG config home directory
+ * - Returns $XDG_CONFIG_HOME or ~/.config on Unix (not Windows)
+ * - Always expands tilde if present
+ */
+export function getXdgConfigHome(): string {
+	if (process.platform === "win32") return homedir();
+	const xdgConfig = process.env.XDG_CONFIG_HOME;
+	if (xdgConfig) {
+		if (xdgConfig === "~") return homedir();
+		if (xdgConfig.startsWith("~/")) return homedir() + xdgConfig.slice(1);
+		return xdgConfig;
+	}
+	return join(homedir(), ".config");
+}
+
+/**
+ * Get XDG data home directory
+ * - Returns $XDG_DATA_HOME or ~/.local/share on Unix (not Windows)
+ * - Always expands tilde if present
+ */
+export function getXdgDataHome(): string {
+	if (process.platform === "win32") return homedir();
+	const xdgData = process.env.XDG_DATA_HOME;
+	if (xdgData) {
+		if (xdgData === "~") return homedir();
+		if (xdgData.startsWith("~/")) return homedir() + xdgData.slice(1);
+		return xdgData;
+	}
+	return join(homedir(), ".local", "share");
+}
+
+/**
+ * Check if legacy data exists at ~/.pi/agent/
+ * - Returns true if any files/directories exist under the legacy path
+ * - Detection only, no creation
+ */
+export function hasLegacyData(): boolean {
+	const legacyDir = join(homedir(), CONFIG_DIR_NAME, "agent");
+	try {
+		const entries = existsSync(legacyDir) ? readdirSync(legacyDir) : [];
+		return entries.length > 0;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Get unified default user home directory for backward compatibility
+ * Resolution order:
+ * 1. ENV_AGENT_DIR env var (always wins)
+ * 2. Legacy data exists (~/.pi/agent/*) -> use legacy
+ * 3. Unix with no legacy -> XDG config path
+ * 4. Windows or no XDG -> legacy fallback
+ */
+export function getDefaultUserHomeDir(): string {
 	const envDir = process.env[ENV_AGENT_DIR];
 	if (envDir) {
 		// Expand tilde to home directory
@@ -349,50 +403,136 @@ export function getAgentDir(): string {
 		if (envDir.startsWith("~/")) return homedir() + envDir.slice(1);
 		return envDir;
 	}
+	if (hasLegacyData()) {
+		return join(homedir(), CONFIG_DIR_NAME, "agent");
+	}
+	if (process.platform !== "win32") {
+		return join(getXdgConfigHome(), "pi", "agent");
+	}
 	return join(homedir(), CONFIG_DIR_NAME, "agent");
+}
+
+/**
+ * Get config directory (user-authored/configured content)
+ * Resolution order:
+ * 1. ENV_AGENT_DIR env var -> derive config path from it
+ * 2. Legacy data exists -> use legacy config path
+ * 3. Unix with no legacy -> XDG config path
+ * 4. Windows -> legacy fallback
+ */
+export function getConfigDir(): string {
+	const envDir = process.env[ENV_AGENT_DIR];
+	if (envDir) {
+		const resolvedEnv = envDir === "~" ? homedir() : envDir.startsWith("~/") ? homedir() + envDir.slice(1) : envDir;
+		return join(resolvedEnv, "config");
+	}
+	if (hasLegacyData()) {
+		return join(homedir(), CONFIG_DIR_NAME, "agent");
+	}
+	if (process.platform !== "win32") {
+		return join(getXdgConfigHome(), "pi", "agent");
+	}
+	return join(homedir(), CONFIG_DIR_NAME, "agent");
+}
+
+/**
+ * Get data directory (persistent runtime state)
+ * Resolution order:
+ * 1. ENV_AGENT_DIR env var -> derive data path from it
+ * 2. Legacy data exists -> use legacy data path
+ * 3. Unix with no legacy -> XDG data path
+ * 4. Windows -> legacy fallback
+ */
+export function getDataDir(): string {
+	const envDir = process.env[ENV_AGENT_DIR];
+	if (envDir) {
+		const resolvedEnv = envDir === "~" ? homedir() : envDir.startsWith("~/") ? homedir() + envDir.slice(1) : envDir;
+		return join(resolvedEnv, "data");
+	}
+	if (hasLegacyData()) {
+		return join(homedir(), CONFIG_DIR_NAME, "agent");
+	}
+	if (process.platform !== "win32") {
+		return join(getXdgDataHome(), "pi", "agent");
+	}
+	return join(homedir(), CONFIG_DIR_NAME, "agent");
+}
+
+/** Get the agent config directory (e.g., ~/.pi/agent/) */
+export function getAgentDir(): string {
+	return getDefaultUserHomeDir();
 }
 
 /** Get path to user's custom themes directory */
 export function getCustomThemesDir(): string {
-	return join(getAgentDir(), "themes");
+	return join(getConfigDir(), "themes");
 }
 
 /** Get path to models.json */
-export function getModelsPath(): string {
-	return join(getAgentDir(), "models.json");
+export function getModelRegistryPath(): string {
+	return join(getConfigDir(), "models.json");
 }
 
 /** Get path to auth.json */
 export function getAuthPath(): string {
-	return join(getAgentDir(), "auth.json");
+	return join(getConfigDir(), "auth.json");
 }
 
 /** Get path to settings.json */
 export function getSettingsPath(): string {
-	return join(getAgentDir(), "settings.json");
+	return join(getConfigDir(), "settings.json");
 }
 
 /** Get path to tools directory */
 export function getToolsDir(): string {
-	return join(getAgentDir(), "tools");
+	return join(getConfigDir(), "tools");
 }
 
 /** Get path to managed binaries directory (fd, rg) */
 export function getBinDir(): string {
-	return join(getAgentDir(), "bin");
+	return join(getDataDir(), "bin");
 }
 
 /** Get path to prompt templates directory */
 export function getPromptsDir(): string {
-	return join(getAgentDir(), "prompts");
+	return join(getConfigDir(), "prompts");
 }
 
 /** Get path to sessions directory */
 export function getSessionsDir(): string {
-	return join(getAgentDir(), "sessions");
+	return join(getDataDir(), "sessions");
 }
 
 /** Get path to debug log file */
 export function getDebugLogPath(): string {
-	return join(getAgentDir(), `${APP_NAME}-debug.log`);
+	return join(getDataDir(), `${APP_NAME}-debug.log`);
+}
+
+/** Get path to extensions directory */
+export function getExtensionsDir(): string {
+	return join(getConfigDir(), "extensions");
+}
+
+/** Get path to keybindings.json */
+export function getKeybindingsPath(agentDir?: string): string {
+	if (agentDir) {
+		// Legacy behavior: derive from provided agentDir
+		return join(agentDir, "keybindings.json");
+	}
+	return join(getConfigDir(), "keybindings.json");
+}
+
+/** Get path to skills directory */
+export function getSkillsDir(): string {
+	return join(getConfigDir(), "skills");
+}
+
+/** Get path to SYSTEM.md */
+export function getSystemPromptPath(): string {
+	return join(getConfigDir(), "SYSTEM.md");
+}
+
+/** Get path to APPEND_SYSTEM.md */
+export function getAppendSystemPromptPath(): string {
+	return join(getConfigDir(), "APPEND_SYSTEM.md");
 }

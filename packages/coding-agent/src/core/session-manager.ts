@@ -16,7 +16,7 @@ import {
 import { readdir, readFile, stat } from "fs/promises";
 import { join, resolve } from "path";
 import { v7 as uuidv7 } from "uuid";
-import { getAgentDir as getDefaultAgentDir, getSessionsDir } from "../config.js";
+import { getDataDir, getSessionsDir } from "../config.js";
 import {
 	type BashExecutionMessage,
 	type CustomMessage,
@@ -423,11 +423,11 @@ export function buildSessionContext(
 
 /**
  * Compute the default session directory for a cwd.
- * Encodes cwd into a safe directory name under ~/.pi/agent/sessions/.
+ * Encodes cwd into a safe directory name under $XDG_DATA_HOME/pi/agent/sessions/.
  */
-export function getDefaultSessionDir(cwd: string, agentDir: string = getDefaultAgentDir()): string {
+export function getDefaultSessionDir(cwd: string): string {
 	const safePath = `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
-	const sessionDir = join(agentDir, "sessions", safePath);
+	const sessionDir = join(getDataDir(), "sessions", safePath);
 	if (!existsSync(sessionDir)) {
 		mkdirSync(sessionDir, { recursive: true });
 	}

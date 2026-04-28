@@ -21,7 +21,7 @@ import * as _bundledPiTui from "@mariozechner/pi-tui";
 import * as _bundledTypebox from "typebox";
 import * as _bundledTypeboxCompile from "typebox/compile";
 import * as _bundledTypeboxValue from "typebox/value";
-import { CONFIG_DIR_NAME, getAgentDir, isBunBinary } from "../../config.js";
+import { CONFIG_DIR_NAME, getAgentDir, getExtensionsDir, isBunBinary } from "../../config.js";
 // NOTE: This import works because loader.ts exports are NOT re-exported from index.ts,
 // avoiding a circular dependency. Extensions can import from @mariozechner/pi-coding-agent.
 import * as _bundledPiCodingAgent from "../../index.js";
@@ -560,7 +560,7 @@ function discoverExtensionsInDir(dir: string): string[] {
 export async function discoverAndLoadExtensions(
 	configuredPaths: string[],
 	cwd: string,
-	agentDir: string = getAgentDir(),
+	_agentDir: string = getAgentDir(),
 	eventBus?: EventBus,
 ): Promise<LoadExtensionsResult> {
 	const allPaths: string[] = [];
@@ -580,8 +580,8 @@ export async function discoverAndLoadExtensions(
 	const localExtDir = path.join(cwd, CONFIG_DIR_NAME, "extensions");
 	addPaths(discoverExtensionsInDir(localExtDir));
 
-	// 2. Global extensions: agentDir/extensions/
-	const globalExtDir = path.join(agentDir, "extensions");
+	// 2. Global extensions: getConfigDir()/extensions/
+	const globalExtDir = getExtensionsDir();
 	addPaths(discoverExtensionsInDir(globalExtDir));
 
 	// 3. Explicitly configured paths

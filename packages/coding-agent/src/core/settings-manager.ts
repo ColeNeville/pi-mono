@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
-import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
+import { CONFIG_DIR_NAME, getSettingsPath } from "../config.js";
 
 export interface CompactionSettings {
 	enabled?: boolean; // default: true
@@ -158,8 +158,8 @@ export class FileSettingsStorage implements SettingsStorage {
 	private globalSettingsPath: string;
 	private projectSettingsPath: string;
 
-	constructor(cwd: string, agentDir: string) {
-		this.globalSettingsPath = join(agentDir, "settings.json");
+	constructor(cwd: string, _agentDir?: string) {
+		this.globalSettingsPath = getSettingsPath();
 		this.projectSettingsPath = join(cwd, CONFIG_DIR_NAME, "settings.json");
 	}
 
@@ -270,7 +270,7 @@ export class SettingsManager {
 	}
 
 	/** Create a SettingsManager that loads from files */
-	static create(cwd: string, agentDir: string = getAgentDir()): SettingsManager {
+	static create(cwd: string, agentDir?: string): SettingsManager {
 		const storage = new FileSettingsStorage(cwd, agentDir);
 		return SettingsManager.fromStorage(storage);
 	}

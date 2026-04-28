@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import chalk from "chalk";
-import { CONFIG_DIR_NAME } from "../config.js";
+import { CONFIG_DIR_NAME, getConfigDir } from "../config.js";
 import { loadThemeFromPath, type Theme } from "../modes/interactive/theme/theme.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
 
@@ -624,11 +624,12 @@ export class DefaultResourceLoader implements ResourceLoader {
 		}
 
 		const normalizedPath = resolve(filePath);
+		const configDir = getConfigDir();
 		const agentRoots = [
-			join(this.agentDir, "skills"),
-			join(this.agentDir, "prompts"),
-			join(this.agentDir, "themes"),
-			join(this.agentDir, "extensions"),
+			join(configDir, "skills"),
+			join(configDir, "prompts"),
+			join(configDir, "themes"),
+			join(configDir, "extensions"),
 		];
 		const projectRoots = [
 			join(this.cwd, CONFIG_DIR_NAME, "skills"),
@@ -696,7 +697,8 @@ export class DefaultResourceLoader implements ResourceLoader {
 		const themes: Theme[] = [];
 		const diagnostics: ResourceDiagnostic[] = [];
 		if (includeDefaults) {
-			const defaultDirs = [join(this.agentDir, "themes"), join(this.cwd, CONFIG_DIR_NAME, "themes")];
+			const configDir = getConfigDir();
+			const defaultDirs = [join(configDir, "themes"), join(this.cwd, CONFIG_DIR_NAME, "themes")];
 
 			for (const dir of defaultDirs) {
 				this.loadThemesFromDir(dir, themes, diagnostics);
@@ -847,7 +849,8 @@ export class DefaultResourceLoader implements ResourceLoader {
 			return projectPath;
 		}
 
-		const globalPath = join(this.agentDir, "SYSTEM.md");
+		const configDir = getConfigDir();
+		const globalPath = join(configDir, "SYSTEM.md");
 		if (existsSync(globalPath)) {
 			return globalPath;
 		}
@@ -861,7 +864,8 @@ export class DefaultResourceLoader implements ResourceLoader {
 			return projectPath;
 		}
 
-		const globalPath = join(this.agentDir, "APPEND_SYSTEM.md");
+		const configDir = getConfigDir();
+		const globalPath = join(configDir, "APPEND_SYSTEM.md");
 		if (existsSync(globalPath)) {
 			return globalPath;
 		}

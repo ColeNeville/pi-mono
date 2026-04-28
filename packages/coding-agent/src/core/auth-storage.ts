@@ -15,9 +15,9 @@ import {
 } from "@mariozechner/pi-ai";
 import { getOAuthApiKey, getOAuthProvider, getOAuthProviders } from "@mariozechner/pi-ai/oauth";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import lockfile from "proper-lockfile";
-import { getAgentDir } from "../config.js";
+import { getAuthPath } from "../config.js";
 import { resolveConfigValue } from "./resolve-config-value.js";
 
 export type ApiKeyCredential = {
@@ -50,7 +50,7 @@ export interface AuthStorageBackend {
 }
 
 export class FileAuthStorageBackend implements AuthStorageBackend {
-	constructor(private authPath: string = join(getAgentDir(), "auth.json")) {}
+	constructor(private authPath: string = getAuthPath()) {}
 
 	private ensureParentDir(): void {
 		const dir = dirname(this.authPath);
@@ -200,7 +200,7 @@ export class AuthStorage {
 	}
 
 	static create(authPath?: string): AuthStorage {
-		return new AuthStorage(new FileAuthStorageBackend(authPath ?? join(getAgentDir(), "auth.json")));
+		return new AuthStorage(new FileAuthStorageBackend(authPath ?? getAuthPath()));
 	}
 
 	static fromStorage(storage: AuthStorageBackend): AuthStorage {

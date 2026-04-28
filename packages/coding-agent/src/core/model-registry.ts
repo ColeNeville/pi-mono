@@ -20,11 +20,10 @@ import {
 } from "@mariozechner/pi-ai";
 import { registerOAuthProvider, resetOAuthProviders } from "@mariozechner/pi-ai/oauth";
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
 import { type Static, Type } from "typebox";
 import { Compile } from "typebox/compile";
 import type { TLocalizedValidationError } from "typebox/error";
-import { getAgentDir } from "../config.js";
+import { getModelRegistryPath } from "../config.js";
 import type { AuthStatus, AuthStorage } from "./auth-storage.js";
 import {
 	clearConfigValueCache,
@@ -326,7 +325,7 @@ export class ModelRegistry {
 		this.loadModels();
 	}
 
-	static create(authStorage: AuthStorage, modelsJsonPath: string = join(getAgentDir(), "models.json")): ModelRegistry {
+	static create(authStorage: AuthStorage, modelsJsonPath: string = getModelRegistryPath()): ModelRegistry {
 		return new ModelRegistry(authStorage, modelsJsonPath);
 	}
 

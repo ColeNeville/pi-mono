@@ -5,7 +5,7 @@
 import chalk from "chalk";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { CONFIG_DIR_NAME, getAgentDir, getBinDir } from "./config.js";
+import { CONFIG_DIR_NAME, getAgentDir, getConfigDir, getDataDir } from "./config.js";
 import { migrateKeybindingsConfig } from "./core/keybindings.js";
 
 const MIGRATION_GUIDE_URL =
@@ -18,10 +18,10 @@ const EXTENSIONS_DOC_URL = "https://github.com/badlogic/pi-mono/blob/main/packag
  * @returns Array of provider names that were migrated
  */
 export function migrateAuthToAuthJson(): string[] {
-	const agentDir = getAgentDir();
-	const authPath = join(agentDir, "auth.json");
-	const oauthPath = join(agentDir, "oauth.json");
-	const settingsPath = join(agentDir, "settings.json");
+	const configDir = getConfigDir();
+	const authPath = join(configDir, "auth.json");
+	const oauthPath = join(configDir, "oauth.json");
+	const settingsPath = join(configDir, "settings.json");
 
 	// Skip if auth.json already exists
 	if (existsSync(authPath)) return [];
@@ -81,14 +81,14 @@ export function migrateAuthToAuthJson(): string[] {
  * See: https://github.com/badlogic/pi-mono/issues/320
  */
 export function migrateSessionsFromAgentRoot(): void {
-	const agentDir = getAgentDir();
+	const dataDir = getDataDir();
 
-	// Find all .jsonl files directly in agentDir (not in subdirectories)
+	// Find all .jsonl files directly in dataDir (not in subdirectories)
 	let files: string[];
 	try {
-		files = readdirSync(agentDir)
+		files = readdirSync(dataDir)
 			.filter((f) => f.endsWith(".jsonl"))
-			.map((f) => join(agentDir, f));
+			.map((f) => join(dataDir, f));
 	} catch {
 		return;
 	}
@@ -109,7 +109,7 @@ export function migrateSessionsFromAgentRoot(): void {
 
 			// Compute the correct session directory (same encoding as session-manager.ts)
 			const safePath = `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
-			const correctDir = join(agentDir, "sessions", safePath);
+			const correctDir = join(dataDir, "sessions", safePath);
 
 			// Create directory if needed
 			if (!existsSync(correctDir)) {
@@ -154,7 +154,8 @@ function migrateCommandsToPrompts(baseDir: string, label: string): boolean {
 }
 
 function migrateKeybindingsConfigFile(): void {
-	const configPath = join(getAgentDir(), "keybindings.json");
+	const configDir = getConfigDir();
+	const configPath = join(configDir, "keybindings.json");
 	if (!existsSync(configPath)) return;
 
 	try {
@@ -174,9 +175,10 @@ function migrateKeybindingsConfigFile(): void {
  * Move fd/rg binaries from tools/ to bin/ if they exist.
  */
 function migrateToolsToBin(): void {
-	const agentDir = getAgentDir();
-	const toolsDir = join(agentDir, "tools");
-	const binDir = getBinDir();
+	const configDir = getConfigDir();
+	const dataDir = getDataDir();
+	const toolsDir = join(configDir, "tools");
+	const binDir = dataDir;
 
 	if (!existsSync(toolsDir)) return;
 
